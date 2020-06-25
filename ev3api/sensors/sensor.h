@@ -35,6 +35,18 @@ namespace ev3api
         }
 
     public:
+        // TODO: Attribute improvements:
+        // 1) Expose them
+        // 2) Add override for getter T operator()
+        // 3) Add override for setter void operator(T&)
+        // 4) Initialize with DevicePath right away (this can be access in member intializers), use something like:
+        //    m_mode = { "mode", Path }
+        //    m_mode("mode", Path)
+        // 5) Add cached attributes with refresh() method, name it Constant
+        // 6) Add support for string-based enums
+        // 7) Change default type to string or int
+        // 8) Change default parsing to conversion from string
+
         AttributeRaw m_bin_data = "bin_data";
         Attribute<string> m_bin_data_format = "bin_data_format";
         Attribute<string> m_commands = "commands";
@@ -56,8 +68,6 @@ namespace ev3api
             : Device(devicePath)
         {
         }
-
-        
 
         template <class T, class TSerializer = Serializer<T>>
         T getBinData() { return m_bin_data.getValue<T, TSerializer>(Path); }

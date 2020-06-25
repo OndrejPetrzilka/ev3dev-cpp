@@ -61,11 +61,12 @@
 				"command": "/usr/bin/arm-linux-gnueabi-gcc",
 				"args": [
 					"-Iev3api",
-					"-g",
+					//"-g",
 					"${file}",
 					"-o",
 					"${workspaceFolder}/build/${fileBasenameNoExtension}",
 					"-lstdc++",
+					"-lm",
 				],
 				"options": {
 					"cwd": "${workspaceFolder}"
@@ -90,6 +91,7 @@
 					"-o",
 					"build_x64/${fileBasenameNoExtension}",
 					"-lstdc++",
+					"-lm",
 				],
 				"options": {
 					"cwd": "${workspaceFolder}"

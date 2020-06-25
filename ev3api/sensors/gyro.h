@@ -41,6 +41,12 @@ namespace ev3api
             return Sensor::getBinData<T, TSerializer>();
         }
 
+        template <class T, class TSerializer = Serializer<T>>
+        int getRawValues(T* buffer, int count)
+        {
+            m_bin_data.read<T, TSerializer>(Path, buffer, count, 0);
+        }
+
         int getValue()
         {
             return m_value0.getValue(Path);
