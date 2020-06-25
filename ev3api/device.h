@@ -2,8 +2,12 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <string>
 
-#include "attribute.h"
+#include "attribute/attribute.h"
+#include "serializer/serializer.h"
+
+using namespace std;
 
 namespace ev3api
 {
@@ -12,14 +16,21 @@ namespace ev3api
     {
     public:
         const char *const Path;
+        
+        Attribute<string> m_address = "address";
+        Attribute<string> m_driver_name = "driver_name";
 
         Device(const char *devicePath)
             : Path(devicePath)
         {
         }
 
-        ~Device()
+        const char *getPath() const
         {
+            return Path;
         }
+
+        string getAddress() { return m_address.getValue(Path); }
+        string getDriverName() { return m_driver_name.getValue(Path); }
     };
 } // namespace ev3api

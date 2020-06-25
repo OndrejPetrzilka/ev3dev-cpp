@@ -3,7 +3,7 @@
         {
             "name": "Linux",
             "includePath": [
-                "${workspaceFolder}/**"
+                "${workspaceFolder}/ev3api/**"
             ],
             "defines": [],
             "cStandard": "c11",

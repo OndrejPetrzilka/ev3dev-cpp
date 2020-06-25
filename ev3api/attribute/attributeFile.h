@@ -6,13 +6,13 @@
 
 namespace ev3api
 {
-    class Attribute
+    class AttributeFile
     {
     private:
         FILE *m_handle;
 
     public:
-        ~Attribute()
+        ~AttributeFile()
         {
             close();
         }
@@ -26,7 +26,12 @@ namespace ev3api
                 strcpy(buf, devicePath);
                 strcat(buf, attributeName);
                 m_handle = fopen(buf, fileOpenMode);
-                return m_handle != nullptr;
+                if (m_handle != nullptr)
+                {
+                    setbuf(m_handle, nullptr);
+                    return true;
+                }
+                return false;
             }
             return true;
         }
