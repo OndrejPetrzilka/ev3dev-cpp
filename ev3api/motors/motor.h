@@ -26,5 +26,7 @@ namespace ev3api
         }
 
         bool setCommand(const char *command) { return m_command.setValue(Path, command); }
+
+        string getStateString() { return m_state.getValue<string>(Path); }
     };
 } // namespace ev3api

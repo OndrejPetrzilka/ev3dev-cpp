@@ -17,8 +17,7 @@ namespace ev3api
         Variable<int, SerializerTextInt> m_rampUpSp = "ramp_up_sp";
         Variable<int, SerializerTextInt> m_rampDownSp = "ramp_down_sp";
         Variable<int, SerializerTextInt> m_timeSp = "time_sp";
-
-        Command<const char *> m_stopAction = "stop_action";
+        Variable<string> m_stopAction = "stop_action";
 
     public:
         DcMotor(const char *devicePath)
@@ -34,6 +33,9 @@ namespace ev3api
 
         // Gets available stop actions
         string getStopActions() { return m_stopActions.getValue(Path); }
+
+        // Get current stop action
+        string getStopAction() { return m_stopAction.getValue(Path);}
 
         // Sets stop action
         bool setStopAction(const char *stopAction) { return m_stopAction.setValue(Path, stopAction); }
