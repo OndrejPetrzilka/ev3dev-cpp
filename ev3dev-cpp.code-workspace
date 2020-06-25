@@ -21,7 +21,8 @@
 					"-g",
 					"${file}",
 					"-o",
-					"${workspaceFolder}/build/${fileBasenameNoExtension}"
+					"${workspaceFolder}/build/${fileBasenameNoExtension}",
+					"-lstdc++",
 				],
 				"options": {
 					"cwd": "${workspaceFolder}"
@@ -43,7 +44,8 @@
 					"-g",
 					"${file}",
 					"-o",
-					"build_x64/${fileBasenameNoExtension}"
+					"build_x64/${fileBasenameNoExtension}",
+					"-lstdc++",
 				],
 				"options": {
 					"cwd": "${workspaceFolder}"
