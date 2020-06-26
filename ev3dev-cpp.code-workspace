@@ -77,7 +77,17 @@
 				"group": {
 					"kind": "build",
 					"isDefault": true
-				}
+				},
+				"dependsOn": "Clean ARM builds",
+			},
+			{
+				"type": "shell",
+				"label": "Clean ARM builds",
+				"command": "ls -Q | grep -v ${fileBasenameNoExtension} | xargs rm -f",
+				"options": {
+					"cwd": "${workspaceFolder}/build"
+				},
+				"group": "none"
 			},
 			{
 				// Builds active file using GCC for x64, executable can be locally debugged
@@ -164,5 +174,4 @@
 		"compounds": []
 	},
 	"ev3devBrowser.download.directory": "",
-	
 }
