@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <string>
+#include <sys/stat.h>
 
 #include "attribute/attribute.h"
 #include "serializer/serializer.h"
@@ -28,6 +29,12 @@ namespace ev3api
         const char *getPath() const
         {
             return Path;
+        }
+
+        bool isConnected()
+        {
+            struct stat sb;
+            return stat(Path, &sb) == 0 && S_ISDIR(sb.st_mode);
         }
 
         string getAddress() { return m_address.getValue(Path); }

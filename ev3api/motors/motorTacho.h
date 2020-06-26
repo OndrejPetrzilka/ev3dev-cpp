@@ -5,6 +5,7 @@ using namespace std;
 
 namespace ev3api
 {
+    // EV3 Lego tacho motor, reports position at about 500 Hz
     class TachoMotor : public DcMotor
     {
     public:

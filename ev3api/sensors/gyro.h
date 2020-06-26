@@ -5,6 +5,7 @@
 
 namespace ev3api
 {
+    // Lego gyroscope, provides data at about 100 Hz
     class Gyro : Sensor
     {
     public:

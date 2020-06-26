@@ -33,6 +33,16 @@ namespace ev3api
             va_end(args);
             return r;
         }
+
+        int printClear(const char* format, ...)
+        {
+            clear();
+            va_list args;
+            va_start(args, format);
+            int r = vprintf(format, args);
+            va_end(args);
+            return r;
+        }
     };
 
     EV3Display display;
