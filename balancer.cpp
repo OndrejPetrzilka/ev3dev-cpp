@@ -13,14 +13,18 @@
 
 using namespace ev3api;
 
+#define CLEAR_SCREEN "\033[H\033[J"
+
 EV3Buttons buttons;
 EV3Led led(LED_LEFT_GREEN);
 
-Gyro gyro("/sys/class/lego-sensor/sensor0/");
+Gyro gyro("/sys/class/lego-sensor/sensor11/");
+Sensor us("/sys/class/lego-sensor/sensor10/");
 TachoMotor motorRight("/sys/class/tacho-motor/motor0/");
 TachoMotor motorLeft("/sys/class/tacho-motor/motor1/");
 
-const float restAngle = 21;
+const float restAngle = -25;
+const float restDist = 93;
 
 uint64_t nowMs()
 {
@@ -54,9 +58,9 @@ void setRunning(TachoMotor &motor, bool running)
 {
 	if (running)
 	{
-		motor.setStopAction("hold");
+		motor.setStopAction("coast");
 		motor.setSpeedSp(motor.getMaxSpeed());
-		//motor.setCommand("run-direct");
+		motor.setCommand("run-direct");
 	}
 	else
 	{
@@ -64,31 +68,51 @@ void setRunning(TachoMotor &motor, bool running)
 	}
 }
 
-void drive(bool apply, int angle, int rate, int &debug)
+void drive(bool apply, int angle, int rate, int distance, int &debug)
+{
+	// Absolute gyro angle is unreliable, use rate instead
+
+	int duty = std::roundf(clamp(rate * 10.0f, -100.0f, 100.0f));
+	//int duty =  rate > 0 ? 10 : (rate < 0 ? -10 : 0);
+
+	if (apply)
+	{
+		motorLeft.setDutyCycleSp(duty);
+		motorRight.setDutyCycleSp(duty);
+	}
+}
+
+void driveOld(bool apply, int angle, int rate, int distance, int &debug)
 {
 	// 22 degrees tilt can be recovered by relative motor rotation of -140 units
 
 	// Height in wheel travel units
 	const float height = 374;
-	const float centerOfMass = height * 0.5f;
+	const float centerOfMass = height * 0.75f;
 
 	// How long does it take for controller to react
-	const float predictionTime = 0.01f;
+	const float predictionTimeMs = 75;
+	const float predictionTime = predictionTimeMs / 1000.0f;
+
+	const float motorPrediction = 25 / 1000.0f;
 
 	float predictedAngle = angle + rate * predictionTime;
 
 	float moveDist = cosf(deg2rad(90.0f - predictedAngle)) * centerOfMass;
-	debug = -moveDist;
+	debug = moveDist;
 
-	float duty = roundf(clamp(-moveDist * 35.0f, -100.0f, 100.0f));
+	float duty = roundf(clamp(moveDist * 35.0f, -100.0f, 100.0f));
 
 	if (apply)
 	{
 		//motorLeft.setDutyCycleSp(duty);
 		//motorRight.setDutyCycleSp(duty);
 
-		motorLeft.setPositionSp(motorLeft.getPosition() + roundf(-moveDist));
-		motorRight.setPositionSp(motorRight.getPosition() + roundf(-moveDist));
+		float motorMoveDistLeft = moveDist + motorLeft.getSpeed() * motorPrediction;
+		float motorMoveDistRight = moveDist + motorRight.getSpeed() * motorPrediction;
+
+		motorLeft.setPositionSp(motorLeft.getPosition() + roundf(motorMoveDistLeft));
+		motorRight.setPositionSp(motorRight.getPosition() + roundf(motorMoveDistRight));
 
 		motorLeft.setCommand("run-to-abs-pos");
 		motorRight.setCommand("run-to-abs-pos");
@@ -111,6 +135,8 @@ int main(int argc, const char *argv[])
 {
 	display.setFont("Uni2-VGA16");
 	gyro.setMode(Gyro::Mode::GYRO_GA);
+
+	us.setMode("US-DIST-CM");
 
 	setRunning(false);
 
@@ -164,16 +190,20 @@ int main(int argc, const char *argv[])
 		}
 
 		gyro.getRawValues(angleRate, 2);
-		angleRate[0] += restAngle;
 
-		drive(running, angleRate[0], angleRate[1], debugValue);
+		int angle = angleRate[0] + restAngle;
+		int rate = angleRate[1];
+
+		int distMm = us.getBinData<short>();
+
+		drive(running, angle, rate, distMm, debugValue);
 
 		const char *formatStr =
-			"\033[H\033[J" // Clear
+			CLEAR_SCREEN
 			"[x] On/Off, [v] Cal\n"
 			"[^] Reset, [>] Off\n"
-			"State: %s\n"
-			"Angle: %i, Rate: %i\n"
+			"Dist: %i\n"
+			"Gyro: %i (%i), %i\n"
 			"Speed: %i, %i\n"
 			"Position: %i, %i\n"
 			"Debug: %i\n";
@@ -182,7 +212,7 @@ int main(int argc, const char *argv[])
 		if (enableDisplay && elapsedMs(time) > 250)
 		{
 			time = nowMs();
-			display.print(formatStr, motorLeft.getStateString().c_str(), angleRate[0], angleRate[1], motorLeft.getSpeed(), motorRight.getSpeed(), motorLeft.getPosition(), motorRight.getPosition(), debugValue);
+			display.print(formatStr, distMm, angle, angleRate[0], rate, motorLeft.getSpeed(), motorRight.getSpeed(), motorLeft.getPosition(), motorRight.getPosition(), debugValue);
 		}
 	}
 	return 0;
