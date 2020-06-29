@@ -19,12 +19,10 @@ using namespace ev3api;
 EV3Buttons buttons;
 EV3Led led(LED_LEFT_GREEN);
 
-Gyro gyro("/sys/class/lego-sensor/sensor11/");
-Sensor us("/sys/class/lego-sensor/sensor10/");
-TachoMotor motorRight("/sys/class/tacho-motor/motor0/");
-TachoMotor motorLeft("/sys/class/tacho-motor/motor1/");
-
-TachoMotor motorCenter("/sys/class/tacho-motor/motor2/");
+Gyro gyro(InputPort::InputPort2);
+Sensor us(InputPort::InputPort3);
+TachoMotor motorRight(OutputPort::OutputPortA);
+TachoMotor motorLeft(OutputPort::OutputPortD);
 
 // CONFIGURATION
 
@@ -37,17 +35,20 @@ const float CenterOfMassHeight = 170;
 // UltraSound sensor height in mm for balanced robot
 const float BalanceSensorDist = 219;
 
-void drive(bool apply, int angleRate, int distance, int &debug)
+void drive(TachoMotor &left, TachoMotor &right, bool apply, int angleRate, int distance, int &outLeft, int &outRight)
 {
 	// Absolute gyro angle is unreliable, use rate instead
 
 	int duty = std::roundf(clamp(angleRate * 10.0f, -100.0f, 100.0f));
 	//int duty =  rate > 0 ? 10 : (rate < 0 ? -10 : 0);
 
+	outLeft = duty;
+	outRight = duty;
+
 	if (apply)
 	{
-		motorLeft.setDutyCycleSp(duty);
-		motorRight.setDutyCycleSp(duty);
+		left.setDutyCycleSp(outLeft);
+		right.setDutyCycleSp(outRight);
 	}
 }
 
@@ -84,17 +85,11 @@ int main(int argc, const char *argv[])
 
 	bool running = false;
 	bool enableDisplay = true;
-	int debugValue = 0;
 
 	debug.print("test");
 
 	while (!buttons.back())
 	{
-		motorCenter.setStopAction("coast");
-		motorCenter.setSpeedSp(motorCenter.getMaxSpeed());
-		motorCenter.setCommand("run-direct");
-		motorCenter.setDutyCycleSp(20);
-
 		if (buttons.center())
 		{
 			running = !running;
@@ -137,7 +132,8 @@ int main(int argc, const char *argv[])
 
 		int distMm = us.getBinData<short>();
 
-		drive(running, rate, distMm, debugValue);
+		int driveLeft, driveRight;
+		drive(motorLeft, motorRight, running, rate, distMm, driveLeft, driveRight);
 
 		const char *formatStr =
 			CLEAR_SCREEN
@@ -147,13 +143,13 @@ int main(int argc, const char *argv[])
 			"Gyro: %i °/s\n"
 			"Speed: %i, %i\n"
 			"Position: %i, %i\n"
-			"Debug: %i\n";
+			"Debug: %i, %i\n";
 
 		// Update UI few times per second
 		if (enableDisplay && elapsedMs(time) > 250)
 		{
 			time = nowMs();
-			display.print(formatStr, distMm, rate, motorLeft.getSpeed(), motorRight.getSpeed(), motorLeft.getPosition(), motorRight.getPosition(), debugValue);
+			display.print(formatStr, distMm, rate, motorLeft.getSpeed(), motorRight.getSpeed(), motorLeft.getPosition(), motorRight.getPosition(), driveLeft, driveRight);
 		}
 	}
 	return 0;
