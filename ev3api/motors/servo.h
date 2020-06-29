@@ -8,10 +8,14 @@ namespace ev3api
     class ServoMotor : public Motor
     {
     public:
-
     public:
-        ServoMotor(const char *devicePath)
+        ServoMotor(string devicePath)
             : Motor(devicePath)
+        {
+        }
+
+        ServoMotor(OutputPort port)
+            : Motor(findDevicePath(SERVO_MOTOR_PATH, port))
         {
         }
     };

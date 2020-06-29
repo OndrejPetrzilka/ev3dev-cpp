@@ -64,8 +64,13 @@ namespace ev3api
         Command<const char *> m_command = "command";
 
     public:
-        Sensor(const char *devicePath)
+        Sensor(string devicePath)
             : Device(devicePath)
+        {
+        }
+
+        Sensor(InputPort port)
+            : Device(Device::findDevicePath(SENSOR_PATH, port).c_str())
         {
         }
 

@@ -22,8 +22,13 @@ namespace ev3api
 
         Attribute<int, SerializerTextInt> m_value0 = "value0";
 
-        Gyro(const char *devicePath)
+        Gyro(string devicePath)
             : Sensor(devicePath)
+        {
+        }
+
+        Gyro(InputPort port)
+            : Sensor(port)
         {
         }
 
@@ -43,7 +48,7 @@ namespace ev3api
         }
 
         template <class T, class TSerializer = Serializer<T>>
-        int getRawValues(T* buffer, int count)
+        int getRawValues(T *buffer, int count)
         {
             m_bin_data.read<T, TSerializer>(Path, buffer, count, 0);
         }

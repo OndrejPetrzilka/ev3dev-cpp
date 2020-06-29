@@ -20,7 +20,7 @@ namespace ev3api
         Command<const char *> m_command = "command";
 
     public:
-        Motor(const char *devicePath)
+        Motor(string devicePath)
             : Device(devicePath)
         {
         }

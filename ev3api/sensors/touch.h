@@ -10,8 +10,13 @@ namespace ev3api
     public:
         Attribute<int, SerializerTextInt> m_value0 = "value0";
 
-        Touch(const char *devicePath)
+        Touch(string devicePath)
             : Sensor(devicePath)
+        {
+        }
+
+        Touch(InputPort port)
+            : Sensor(port)
         {
         }
 

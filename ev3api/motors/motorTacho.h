@@ -27,8 +27,13 @@ namespace ev3api
         Variable<int, SerializerTextInt> m_speedPidKp = "speed_pid/Kp";
 
     public:
-        TachoMotor(const char *devicePath)
+        TachoMotor(string devicePath)
             : DcMotor(devicePath)
+        {
+        }
+
+        TachoMotor(OutputPort port)
+            : DcMotor(findDevicePath(TACHO_MOTOR_PATH, port))
         {
         }
 
@@ -48,7 +53,7 @@ namespace ev3api
         int getSpeed() { return m_speed.getValue(Path); }
 
         // Returns the current position of the motor in pulses of the rotary encoder.
-        // When the motor rotates clockwise, the position will increase. Likewise, rotating counter-clockwise causes the position to decrease. 
+        // When the motor rotates clockwise, the position will increase. Likewise, rotating counter-clockwise causes the position to decrease.
         // The range is -2,147,483,648 and +2,147,483,647 tachometer counts (32-bit signed integer).
         int getPosition() { return m_position.getValue(Path); }
 
@@ -57,14 +62,14 @@ namespace ev3api
         void setPosition(int value) { m_position.setValue(Path, value); }
 
         // Gets target position for the run-to-abs-pos and run-to-rel-pos commands.
-        // Units are in tacho counts. 
-        // You can use the value returned by counts_per_rot to convert tacho counts to/from rotations or degrees. 
+        // Units are in tacho counts.
+        // You can use the value returned by counts_per_rot to convert tacho counts to/from rotations or degrees.
         // The range is -2,147,483,648 and +2,147,483,647 tachometer counts (32-bit signed integer).
         int getPositionSp() { return m_positionSp.getValue(Path); }
 
         // Sets target position for the run-to-abs-pos and run-to-rel-pos commands.
-        // Units are in tacho counts. 
-        // You can use the value returned by counts_per_rot to convert tacho counts to/from rotations or degrees. 
+        // Units are in tacho counts.
+        // You can use the value returned by counts_per_rot to convert tacho counts to/from rotations or degrees.
         // The range is -2,147,483,648 and +2,147,483,647 tachometer counts (32-bit signed integer).
         void setPositionSp(int value) { m_positionSp.setValue(Path, value); }
 

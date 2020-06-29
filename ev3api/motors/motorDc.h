@@ -20,8 +20,13 @@ namespace ev3api
         Variable<string> m_stopAction = "stop_action";
 
     public:
-        DcMotor(const char *devicePath)
+        DcMotor(string devicePath)
             : Motor(devicePath)
+        {
+        }
+        
+        DcMotor(OutputPort port)
+            : Motor(findDevicePath(DC_MOTOR_PATH, port))
         {
         }
 
