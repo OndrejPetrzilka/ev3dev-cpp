@@ -4,6 +4,7 @@
 #include <time.h>
 #include <math.h>
 
+#include "mathUtils.h"
 #include "display.h"
 #include "debug.h"
 #include "buttons.h"
@@ -23,35 +24,31 @@ Sensor us("/sys/class/lego-sensor/sensor10/");
 TachoMotor motorRight("/sys/class/tacho-motor/motor0/");
 TachoMotor motorLeft("/sys/class/tacho-motor/motor1/");
 
-const float restAngle = -25;
-const float restDist = 93;
+TachoMotor motorCenter("/sys/class/tacho-motor/motor2/");
 
-uint64_t nowMs()
-{
-	struct timespec ts;
-	timespec_get(&ts, TIME_UTC);
-	return ts.tv_sec * 1000ULL + ts.tv_nsec / 1000000ULL; // calculate milliseconds
-}
+// CONFIGURATION
 
-// Gets time elapsed since timestamp
-uint64_t elapsedMs(uint64_t timestamp)
-{
-	return nowMs() - timestamp;
-}
+// Wheel radius in mm
+const float WheelRadius = 55;
 
-float clamp(float value, float min, float max)
-{
-	return value < min ? min : (value > max ? max : value);
-}
+// Center of mass height in mm
+const float CenterOfMassHeight = 170;
 
-inline float deg2rad(float degrees)
-{
-	return degrees / (180.0 / M_PI);
-}
+// UltraSound sensor height in mm for balanced robot
+const float BalanceSensorDist = 219;
 
-inline float rad2deg(float radians)
+void drive(bool apply, int angleRate, int distance, int &debug)
 {
-	return radians * (180.0 / M_PI);
+	// Absolute gyro angle is unreliable, use rate instead
+
+	int duty = std::roundf(clamp(angleRate * 10.0f, -100.0f, 100.0f));
+	//int duty =  rate > 0 ? 10 : (rate < 0 ? -10 : 0);
+
+	if (apply)
+	{
+		motorLeft.setDutyCycleSp(duty);
+		motorRight.setDutyCycleSp(duty);
+	}
 }
 
 void setRunning(TachoMotor &motor, bool running)
@@ -68,63 +65,6 @@ void setRunning(TachoMotor &motor, bool running)
 	}
 }
 
-void drive(bool apply, int angle, int rate, int distance, int &debug)
-{
-	// Absolute gyro angle is unreliable, use rate instead
-
-	int duty = std::roundf(clamp(rate * 10.0f, -100.0f, 100.0f));
-	//int duty =  rate > 0 ? 10 : (rate < 0 ? -10 : 0);
-
-	if (apply)
-	{
-		motorLeft.setDutyCycleSp(duty);
-		motorRight.setDutyCycleSp(duty);
-	}
-}
-
-void driveOld(bool apply, int angle, int rate, int distance, int &debug)
-{
-	// 22 degrees tilt can be recovered by relative motor rotation of -140 units
-
-	// Height in wheel travel units
-	const float height = 374;
-	const float centerOfMass = height * 0.75f;
-
-	// How long does it take for controller to react
-	const float predictionTimeMs = 75;
-	const float predictionTime = predictionTimeMs / 1000.0f;
-
-	const float motorPrediction = 25 / 1000.0f;
-
-	float predictedAngle = angle + rate * predictionTime;
-
-	float moveDist = cosf(deg2rad(90.0f - predictedAngle)) * centerOfMass;
-	debug = moveDist;
-
-	float duty = roundf(clamp(moveDist * 35.0f, -100.0f, 100.0f));
-
-	if (apply)
-	{
-		//motorLeft.setDutyCycleSp(duty);
-		//motorRight.setDutyCycleSp(duty);
-
-		float motorMoveDistLeft = moveDist + motorLeft.getSpeed() * motorPrediction;
-		float motorMoveDistRight = moveDist + motorRight.getSpeed() * motorPrediction;
-
-		motorLeft.setPositionSp(motorLeft.getPosition() + roundf(motorMoveDistLeft));
-		motorRight.setPositionSp(motorRight.getPosition() + roundf(motorMoveDistRight));
-
-		motorLeft.setCommand("run-to-abs-pos");
-		motorRight.setCommand("run-to-abs-pos");
-
-		// motorLeft.setCommand("run-to-rel-pos");
-		// motorRight.setCommand("run-to-rel-pos");
-	}
-
-	//int duty = std::roundf(clamp(-angle * 35.0f, -100.0f, 100.0f));
-	//motor.setDutyCycleSp(duty);
-}
-
 void setRunning(bool running)
 {
 	setRunning(motorLeft, running);
@@ -134,7 +74,7 @@ void setRunning(bool running)
 int main(int argc, const char *argv[])
 {
 	display.setFont("Uni2-VGA16");
-	gyro.setMode(Gyro::Mode::GYRO_GA);
+	gyro.setMode(Gyro::Mode::GYRO_RATE);
 
 	us.setMode("US-DIST-CM");
 
@@ -144,13 +84,17 @@ int main(int argc, const char *argv[])
 
 	bool running = false;
 	bool enableDisplay = true;
-	short angleRate[2];
 	int debugValue = 0;
 
 	debug.print("test");
 
 	while (!buttons.back())
 	{
+		motorCenter.setStopAction("coast");
+		motorCenter.setSpeedSp(motorCenter.getMaxSpeed());
+		motorCenter.setCommand("run-direct");
+		motorCenter.setDutyCycleSp(20);
+
 		if (buttons.center())
 		{
 			running = !running;
@@ -189,21 +133,18 @@ int main(int argc, const char *argv[])
 			enableDisplay = true;
 		}
 
-		gyro.getRawValues(angleRate, 2);
-
-		int angle = angleRate[0] + restAngle;
-		int rate = angleRate[1];
+		short rate = gyro.getRawValue<short>();
 
 		int distMm = us.getBinData<short>();
 
-		drive(running, angle, rate, distMm, debugValue);
+		drive(running, rate, distMm, debugValue);
 
 		const char *formatStr =
 			CLEAR_SCREEN
 			"[x] On/Off, [v] Cal\n"
 			"[^] Reset, [>] Off\n"
 			"Dist: %i\n"
-			"Gyro: %i (%i), %i\n"
+			"Gyro: %i °/s\n"
 			"Speed: %i, %i\n"
 			"Position: %i, %i\n"
 			"Debug: %i\n";
@@ -212,7 +153,7 @@ int main(int argc, const char *argv[])
 		if (enableDisplay && elapsedMs(time) > 250)
 		{
 			time = nowMs();
-			display.print(formatStr, distMm, angle, angleRate[0], rate, motorLeft.getSpeed(), motorRight.getSpeed(), motorLeft.getPosition(), motorRight.getPosition(), debugValue);
+			display.print(formatStr, distMm, rate, motorLeft.getSpeed(), motorRight.getSpeed(), motorLeft.getPosition(), motorRight.getPosition(), debugValue);
 		}
 	}
 	return 0;

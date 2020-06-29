@@ -81,7 +81,7 @@ vector<string> getSensors()
 	return result;
 }
 
-string getSensorName(const char* sensorPath)
+string getSensorName(const char *sensorPath)
 {
 	string path(sensorPath);
 	rtrim(path, "/");
@@ -89,7 +89,7 @@ string getSensorName(const char* sensorPath)
 	return path.substr(lastSep + 1);
 }
 
-string findNextSensor(const char* sensorPath, int offset)
+string findNextSensor(const char *sensorPath, int offset)
 {
 	string sensorName = getSensorName(sensorPath);
 
@@ -110,7 +110,7 @@ string findNextSensor(const char* sensorPath, int offset)
 
 bool setNextSensor(Sensor *sensorPtr, int offset)
 {
-	const char* currentPath = sensorPtr != nullptr && sensorPtr->Path != nullptr ? sensorPtr->Path : "";
+	const char *currentPath = sensorPtr != nullptr && sensorPtr->Path != nullptr ? sensorPtr->Path : "";
 	string nextSensor = findNextSensor(currentPath, offset);
 	debug.printLine("Current path: %s", currentPath);
 	debug.printLine("Next name: %s", nextSensor.c_str());
@@ -122,7 +122,7 @@ bool setNextSensor(Sensor *sensorPtr, int offset)
 
 		debug.printLine("Next path: %s", path.c_str());
 
-		string* x = new string(path.c_str());
+		string *x = new string(path.c_str());
 
 		sensorPtr->~Sensor();
 		new (sensorPtr) Sensor(x->c_str()); // Mem leak
@@ -148,6 +148,8 @@ int main(int argc, const char *argv[])
 
 	vector<string> modes = getModes();
 
+	const int tickRate = 200;
+
 	uint64_t lastValue = 0;
 	int dataCount = 0;
 	int tickCount = 0;
@@ -156,6 +158,7 @@ int main(int argc, const char *argv[])
 	while (!buttons.back())
 	{
 		static int m = 0;
+		uint64_t start = nowMs();
 
 		if (buttons.up())
 		{
@@ -226,6 +229,12 @@ int main(int argc, const char *argv[])
 			lastTime = nowMs();
 			dataCount = 0;
 			tickCount = 0;
+		}
+
+		int sleepTime = (1000.0f / tickRate) - elapsedMs(start);
+		if (sleepTime > 0)
+		{
+			utils.msleep(sleepTime);
 		}
 	}
 	return 0;
