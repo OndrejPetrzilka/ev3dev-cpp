@@ -1,2 +1,5 @@
 /build/**
 /build_x64/**
+/EV3DataListener/bin/**
+/EV3DataListener/obj/**
+/EV3DataListener/.vs/**
