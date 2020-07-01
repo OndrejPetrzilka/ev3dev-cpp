@@ -37,13 +37,13 @@ namespace EV3DataListener
                     packetCount++;
                     var buffer = task.Result.Buffer;
                     task = null;
-                    int zeroIndex = Array.IndexOf(buffer, (byte)0);
 
                     if (buffer.Length == 0)
                     {
                         data.Clear();
+                        Console.Clear();
                     }
-                    else if (zeroIndex >= 0)
+                    else if (buffer.Length >= 4)
                     {
                         float newValue = BitConverter.ToSingle(buffer, 0);
                         string key = Encoding.UTF8.GetString(buffer, 4, buffer.Length - 4);
@@ -68,7 +68,7 @@ namespace EV3DataListener
                         text.Clear();
                         foreach (var pair in data.OrderBy(s => s.Key))
                         {
-                            text.AppendLine($"{pair.Key}: {pair.Value,8}               ");
+                            text.AppendLine($"{pair.Key,16}: {pair.Value,-16}               ");
                         }
                         text.AppendLine("                                 ");
                         text.Append(footer);
