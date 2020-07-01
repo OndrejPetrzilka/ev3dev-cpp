@@ -15,6 +15,7 @@
 #include "leds.h"
 #include "sensors/gyro.h"
 #include "motors/motorTacho.h"
+#include "reporting.h"
 
 using namespace ev3api;
 
@@ -315,13 +316,16 @@ int main(int argc, const char *argv[])
 
     Time base = Time::now();
 
-    int frameIndex;
+    Time timeWindow = Time::now();
+
+    int frameIndex = 0;
+    int frameWindow = 0;
 
     while (true)
     {
         Time start = Time::now();
 
-        handleInput(running);
+        //handleInput(running);
 
         float refPos;
         float robotPos;
@@ -333,50 +337,57 @@ int main(int argc, const char *argv[])
         float input = 0;
         float output = 0;
 
-        frameIndex++;
-        reportData("Frame", frameIndex);
+        // if (running)
+        // {
+        //     getPosition(refPos);
+        //     readEncoders(robotPos, robotSpeed);
+        //     readGyro(angle, angularVelocity);
 
-        if (running)
-        {
-            getPosition(refPos);
-            readEncoders(robotPos, robotSpeed);
-            readGyro(angle, angularVelocity);
+        //     reportData("RefPos", refPos);
+        //     reportData("RobotPos", robotPos);
+        //     reportData("RobotSpeed", robotSpeed);
+        //     reportData("Angle", angle);
+        //     reportData("AngVelocity", angularVelocity);
 
-            reportData("Time s", (int)base.elapsedSeconds());
-            reportData("Time ms", (int)base.elapsedMiliseconds());
+        //     input = combineSensorValues(angularVelocity, angle, robotSpeed, robotPos, refPos);
 
-            reportData("RefPos", refPos);
-            reportData("RobotPos", robotPos);
-            reportData("RobotSpeed", robotSpeed);
-            reportData("Angle", angle);
-            reportData("AngVelocity", angularVelocity);
+        //     reportData("Input", input);
 
-            input = combineSensorValues(angularVelocity, angle, robotSpeed, robotPos, refPos);
+        //     output = pid(input);
 
-            reportData("Input", input);
+        //     reportData("Output", output);
 
-            output = pid(input);
+        //     if (!handleErrors(output))
+        //     {
+        //         //debug.printLine("Error, out of bounds");
+        //         //return 1;
+        //         reportData("Error", 1);
+        //     }
+        //     else
+        //     {
+        //         reportData("Error", 0);
+        //     }
 
-            reportData("Output", output);
-
-            if (!handleErrors(output))
-            {
-                //debug.printLine("Error, out of bounds");
-                //return 1;
-                reportData("Error", 1);
-            }
-            else
-            {
-                reportData("Error", 0);
-            }
-
-            steer = getSteer();
-            setMotorPower(steer, output);
-        }
+        //     steer = getSteer();
+        //     setMotorPower(steer, output);
+        // }
         //updateDisplay(angle, angularVelocity, output);
 
-        while (start.elapsedSeconds() < dt)
-            ;
+        //while (start.elapsedSeconds() < dt)
+        {
+        }
+
+        frameIndex++;
+        frameWindow++;
+        //reportData("Frame", frameIndex);
+        //reportData("Time ms", (int)base.elapsedMiliseconds());
+
+        if (timeWindow.elapsedSeconds() > 0.5)
+        {
+            reportData("FPS", frameWindow / timeWindow.elapsedSeconds());
+            timeWindow = Time::now();
+            frameWindow = 0;
+        }
 
         // while(elapsedMs(start) * 1000.0f < dt)
         // {

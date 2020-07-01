@@ -58,42 +58,4 @@ namespace ev3api
         }
         return ret;
     }
-
-    // Reports values through UDP Broadcast on port 9999
-    // Format:
-    //    float value (4B)
-    //    char[] id (until end of packet, UTF8 characters)
-    void reportData(const char *id, float value)
-    {
-        static int sock = 0;
-
-        struct sockaddr_in s = {};
-        s.sin_family = AF_INET;
-        s.sin_port = (in_port_t)htons(9999);
-        s.sin_addr.s_addr = htonl(INADDR_BROADCAST);
-
-        if (sock == 0)
-        {
-            sock = socket(AF_INET, SOCK_DGRAM, 0);
-            if (sock < 0)
-            {
-                fprintf(stderr, "Error opening socket");
-                return;
-            }
-            int broadcastEnable = 1;
-            int ret = setsockopt(sock, SOL_SOCKET, SO_BROADCAST, &broadcastEnable, sizeof(broadcastEnable));
-            sendto(sock, nullptr, 0, 0, (struct sockaddr *)&s, sizeof(struct sockaddr_in));
-        }
-
-        // TODO: Would be nice to add message coalescing
-
-        int idLen = strlen(id);
-        char buff[idLen + 5] = {};
-
-        *(float*)buff = value;
-        strcpy(&buff[4], id);
-
-        if (sendto(sock, buff, idLen + 4, 0, (struct sockaddr *)&s, sizeof(struct sockaddr_in)) < 0)
-            fprintf(stderr, "Error sending data to socket");
-    }
 } // namespace ev3api

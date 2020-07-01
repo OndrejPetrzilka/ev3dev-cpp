@@ -8,16 +8,22 @@ using System.Threading.Tasks;
 
 namespace EV3DataListener
 {
+    struct Element
+    {
+        public string Name;
+        public float Value;
+    }
+
+
     class Program
     {
-
         static void Main(string[] args)
         {
             const int refreshRateMs = 50;
             int packetCount = 0;
             int updateCount = 0;
             bool isDirty = true;
-            Dictionary<string, float> data = new Dictionary<string, float>();
+            Element[] data = new Element[256];
             StringBuilder text = new StringBuilder(1024);
             Stopwatch timer = Stopwatch.StartNew();
 
@@ -40,16 +46,29 @@ namespace EV3DataListener
 
                     if (buffer.Length == 0)
                     {
-                        data.Clear();
+                        Array.Clear(data, 0, data.Length);
                         Console.Clear();
                     }
-                    else if (buffer.Length >= 4)
+                    else if (buffer.Length == 5)
                     {
                         float newValue = BitConverter.ToSingle(buffer, 0);
-                        string key = Encoding.UTF8.GetString(buffer, 4, buffer.Length - 4);
-                        if (!data.TryGetValue(key, out float value) || value != newValue)
+                        int index = buffer[4];
+                        if (data[index].Value != newValue)
                         {
-                            data[key] = newValue;
+                            data[index].Value = newValue;
+                            isDirty = true;
+                        }
+                    }
+                    else if (buffer.Length >= 7)
+                    {
+                        float newValue = BitConverter.ToSingle(buffer, 0);
+                        int index = buffer[5];
+                        int length = buffer[6];
+
+                        data[index].Name = Encoding.UTF8.GetString(buffer, 7, length);
+                        if (data[index].Value != newValue)
+                        {
+                            data[index].Value = newValue;
                             isDirty = true;
                         }
                     }
@@ -66,9 +85,9 @@ namespace EV3DataListener
                     {
                         Console.SetCursorPosition(0, 0);
                         text.Clear();
-                        foreach (var pair in data.OrderBy(s => s.Key))
+                        foreach (var pair in data.Where(s => s.Name != null).OrderBy(s => s.Name))
                         {
-                            text.AppendLine($"{pair.Key,16}: {pair.Value,-16}               ");
+                            text.AppendLine($"{pair.Name,16}: {pair.Value,-16}               ");
                         }
                         text.AppendLine("                                 ");
                         text.Append(footer);
