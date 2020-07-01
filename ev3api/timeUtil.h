@@ -18,7 +18,7 @@ public:
     static Time now()
     {
         Time time;
-        clock_gettime(CLOCK_MONOTONIC, &time.ts);
+        timespec_get(&time.ts, TIME_UTC);
         return time;
     }
 
