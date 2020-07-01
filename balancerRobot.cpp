@@ -8,6 +8,7 @@
 #include <math.h>
 
 #include "mathUtils.h"
+#include "timeUtil.h"
 #include "display.h"
 #include "debug.h"
 #include "buttons.h"
@@ -41,7 +42,7 @@ const float wheelDiameter = 42;
 const float sampleTime = 22;
 
 // derived constants
-float dt = (sampleTime - 22) / 1000;
+float dt = (sampleTime - 2) / 1000;
 float radius = wheelDiameter / 2000;
 
 // variables
@@ -81,19 +82,22 @@ float getMotorSpeed()
 {
     // This seems like average motor speed over last 7 frames
     encIndex++;
-    if (encIndex == maxIndex)
+    if (encIndex >= maxIndex)
     {
         encIndex = 0;
     }
 
     int compareIndex = encIndex + 1;
-    if (compareIndex == maxIndex)
+    if (compareIndex >= maxIndex)
     {
         compareIndex = 0;
     }
 
     float leftAngle = motorLeft.getPosition() / leftTachoCountPerRotation * 360.0f;
-    float rightAngle = motorRight.getPosition() / leftTachoCountPerRotation * 360.0f;
+    float rightAngle = motorRight.getPosition() / rightTachoCountPerRotation * 360.0f;
+
+    reportData("LeftMotorAng", leftAngle);
+    reportData("RightMotorAng", rightAngle);
 
     encArray[encIndex] = (leftAngle + rightAngle) / 2;
 
@@ -188,6 +192,9 @@ float setMotorPower(float steer, float avgPower)
     float pwrLeft = (avgPower + extraPower) * 0.021f / radius;
     float pwrRight = (avgPower - extraPower) * 0.021f / radius;
 
+    reportData("LeftPower", pwrLeft);
+    reportData("RightPower", pwrRight);
+
     motorLeft.setDutyCycleSp(round(pwrLeft));
     motorRight.setDutyCycleSp(round(pwrRight));
 }
@@ -222,9 +229,14 @@ void initialize()
     leftTachoCountPerRotation = motorLeft.getCountPerRot();
     rightTachoCountPerRotation = motorRight.getCountPerRot();
 
+    reportData("LeftTachoPerRot", leftTachoCountPerRotation);
+    reportData("RightTachoPerRot", rightTachoCountPerRotation);
+    reportData("Radius", radius);
+    reportData("dt", dt);
+
     utils.msleep(100);
 
-    system("beep");
+    //system("beep");
     utils.msleep(100);
     mean = 0;
     for (int i = 0; i < 20; i++)
@@ -235,9 +247,9 @@ void initialize()
     mean /= 20.0f;
 
     utils.msleep(100);
-    system("beep");
+    //system("beep");
     utils.msleep(100);
-    system("beep");
+    //system("beep");
 }
 
 void updateDisplay(float angle, float angularVelocity, float output)
@@ -249,10 +261,10 @@ void updateDisplay(float angle, float angularVelocity, float output)
         const char *formatStr =
             CLEAR_SCREEN
             "[x] On/Off, [>] Off\n"
-            "Gyro: %i, %i °/s\n"
+            "Gyro: %.2f, %.2f °/s\n"
             "Speed: %i, %i\n"
             "Position: %i, %i\n"
-            "Output: %i\n";
+            "Output: %.2f\n";
         display.print(formatStr, angle, angularVelocity, motorLeft.getSpeed(), motorRight.getSpeed(), motorLeft.getPosition(), motorRight.getPosition(), output);
     }
 }
@@ -284,17 +296,30 @@ void handleInput(bool &running)
         utils.msleep(500);
         setRunning(false);
     }
+    if (buttons.up())
+    {
+        running = true;
+        utils.msleep(500);
+        setRunning(true);
+    }
 }
 
 int main(int argc, const char *argv[])
 {
     //initialize();
+    display.setFont("Uni2-VGA16");
 
     bool running = false;
+    running = true;
+    setRunning(true);
+
+    Time base = Time::now();
+
+    int frameIndex;
 
     while (true)
     {
-        uint64_t start = nowMs();
+        Time start = Time::now();
 
         handleInput(running);
 
@@ -308,31 +333,59 @@ int main(int argc, const char *argv[])
         float input = 0;
         float output = 0;
 
+        frameIndex++;
+        reportData("Frame", frameIndex);
+
         if (running)
         {
             getPosition(refPos);
             readEncoders(robotPos, robotSpeed);
             readGyro(angle, angularVelocity);
 
+            reportData("Time s", (int)base.elapsedSeconds());
+            reportData("Time ms", (int)base.elapsedMiliseconds());
+
+            reportData("RefPos", refPos);
+            reportData("RobotPos", robotPos);
+            reportData("RobotSpeed", robotSpeed);
+            reportData("Angle", angle);
+            reportData("AngVelocity", angularVelocity);
+
             input = combineSensorValues(angularVelocity, angle, robotSpeed, robotPos, refPos);
 
+            reportData("Input", input);
+
             output = pid(input);
+
+            reportData("Output", output);
 
             if (!handleErrors(output))
             {
                 //debug.printLine("Error, out of bounds");
                 //return 1;
+                reportData("Error", 1);
+            }
+            else
+            {
+                reportData("Error", 0);
             }
 
             steer = getSteer();
             setMotorPower(steer, output);
         }
-        updateDisplay(angle, angularVelocity, output);
+        //updateDisplay(angle, angularVelocity, output);
 
-        uint64_t remaining = elapsedMs(start) - dt;
-        if (remaining > 0)
-        {
-            utils.msleep(remaining);
-        }
+        while (start.elapsedSeconds() < dt)
+            ;
+
+        // while(elapsedMs(start) * 1000.0f < dt)
+        // {
+        // }
+
+        // uint64_t remaining = elapsedMs(start) - dt;
+        // if (remaining > 0)
+        // {
+        //     utils.msleep(remaining);
+        // }
     }
 }
