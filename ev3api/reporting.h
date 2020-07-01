@@ -56,6 +56,8 @@ void reportData(const char *id, float value)
 
     string idStr(id);
 
+    // TODO: Resend all ids once every few seconds
+
     int valueIndex = 0;
     auto it = idLookup.find(idStr);
     if (it == idLookup.end())
