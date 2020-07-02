@@ -106,8 +106,8 @@ float getMotorSpeed()
     float leftAngle = motorLeft.getPosition() / leftTachoCountPerRotation * 360.0f;
     float rightAngle = motorRight.getPosition() / rightTachoCountPerRotation * 360.0f;
 
-    reportData("LeftMotorAng", leftAngle);
-    reportData("RightMotorAng", rightAngle);
+    reportData("MotorAngL", leftAngle);
+    reportData("MotorAngR", rightAngle);
 
     encArray[encIndex] = (leftAngle + rightAngle) / 2;
 
@@ -215,8 +215,8 @@ float setMotorPower(float steer, float avgPower)
     float pwrLeft = (avgPower + extraPower) * 0.021f / radius;
     float pwrRight = (avgPower - extraPower) * 0.021f / radius;
 
-    reportData("LeftPower", pwrLeft);
-    reportData("RightPower", pwrRight);
+    reportData("_o PowerL", pwrLeft);
+    reportData("_o PowerR", pwrRight);
 
     motorLeft.setDutyCycleSp(round(pwrLeft));
     motorRight.setDutyCycleSp(round(pwrRight));
@@ -262,10 +262,10 @@ void initialize()
     input = 0;
     output = 0;
 
-    reportData("LeftTachoPerRot", leftTachoCountPerRotation);
-    reportData("RightTachoPerRot", rightTachoCountPerRotation);
-    reportData("Radius", radius);
-    reportData("dt", dt);
+    reportData("* TachoPerRotL", leftTachoCountPerRotation);
+    reportData("* TachoPerRotR", rightTachoCountPerRotation);
+    reportData("* Radius", radius);
+    reportData("* dt", dt);
 
     utils.msleep(100);
 
@@ -370,11 +370,11 @@ int main(int argc, const char *argv[])
 
             input = combineSensorValues(angularVelocity, angle, robotSpeed, robotPos, refPos);
 
-            reportData("Input", input);
+            reportData("_i", input);
 
             output = pid(input);
 
-            reportData("Output", output);
+            reportData("_o", output);
 
             if (!handleErrors(output))
             {
@@ -394,12 +394,12 @@ int main(int argc, const char *argv[])
 
         frameIndex++;
         frameWindow++;
-        reportData("Frame", frameIndex);
-        reportData("Time ms", (int)base.elapsedMiliseconds());
+        reportData("_t Frame", frameIndex);
+        reportData("_t Time ms", (int)base.elapsedMiliseconds());
 
         if (timeWindow.elapsedSeconds() > 0.5)
         {
-            reportData("FPS", frameWindow / timeWindow.elapsedSeconds());
+            reportData("_t FPS", frameWindow / timeWindow.elapsedSeconds());
             timeWindow = Time::now();
             frameWindow = 0;
         }
