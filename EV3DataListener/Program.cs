@@ -14,7 +14,6 @@ namespace EV3DataListener
         public float Value;
     }
 
-
     class Program
     {
         static void Main(string[] args)
@@ -46,31 +45,13 @@ namespace EV3DataListener
 
                     if (buffer.Length == 0)
                     {
+                        // Empty packet, clear all data
                         Array.Clear(data, 0, data.Length);
                         Console.Clear();
                     }
-                    else if (buffer.Length == 5)
+                    else
                     {
-                        float newValue = BitConverter.ToSingle(buffer, 0);
-                        int index = buffer[4];
-                        if (data[index].Value != newValue)
-                        {
-                            data[index].Value = newValue;
-                            isDirty = true;
-                        }
-                    }
-                    else if (buffer.Length >= 7)
-                    {
-                        float newValue = BitConverter.ToSingle(buffer, 0);
-                        int index = buffer[5];
-                        int length = buffer[6];
-
-                        data[index].Name = Encoding.UTF8.GetString(buffer, 7, length);
-                        if (data[index].Value != newValue)
-                        {
-                            data[index].Value = newValue;
-                            isDirty = true;
-                        }
+                        ReadBuffer(buffer, data, ref isDirty);
                     }
                 }
 
@@ -99,6 +80,47 @@ namespace EV3DataListener
                         Console.SetCursorPosition(0, Console.CursorTop);
                         Console.Write(footer);
                     }
+                }
+            }
+        }
+
+        private static void ReadBuffer(byte[] buffer, Element[] data, ref bool isDirty)
+        {
+            int pos = 0;
+            while (buffer.Length - pos >= 5)
+            {
+                float newValue = BitConverter.ToSingle(buffer, pos);
+                pos += 4;
+                int index = buffer[pos++];
+                if (index == 255)
+                {
+                    // Value with description
+                    if (buffer.Length - pos < 2)
+                        return;
+
+                    index = buffer[pos++];
+                    int length = buffer[pos++];
+
+                    if (buffer.Length - pos < length)
+                        return;
+
+                    data[index].Name = Encoding.UTF8.GetString(buffer, pos, length);
+                    pos += length;
+                    if (data[index].Value != newValue)
+                    {
+                        data[index].Value = newValue;
+                        isDirty = true;
+                    }
+                }
+                else if (data[index].Value != newValue)
+                {
+                    // Value with just index
+                    if (data[index].Name == null)
+                    {
+                        data[index].Name = $"[{index,3}]";
+                    }
+                    data[index].Value = newValue;
+                    isDirty = true;
                 }
             }
         }

@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <time.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <string.h>
@@ -10,11 +11,17 @@
 #include <netinet/in.h>
 #include <map>
 
+#include "timeUtil.h"
+
 using namespace std;
 
-void queueMessge(const void *ptr, int size)
+void queueMessage(const void *ptr, int size, bool flush)
 {
+    const int mtu = 1200;
     static int sock = 0;
+    static int dataSize = 0;
+    static unsigned char sendBuff[mtu];
+    static Time age;
 
     struct sockaddr_in s = {};
     s.sin_family = AF_INET;
@@ -34,10 +41,33 @@ void queueMessge(const void *ptr, int size)
         sendto(sock, nullptr, 0, 0, (struct sockaddr *)&s, sizeof(struct sockaddr_in));
     }
 
-    // TODO: Would be nice to add message coalescing
+    if (size > 0)
+    {
+        if (dataSize + size > mtu)
+        {
+            // Buffer full
+            if (sendto(sock, sendBuff, dataSize, 0, (struct sockaddr *)&s, sizeof(struct sockaddr_in)) < 0)
+                fprintf(stderr, "Error sending data to socket");
 
-    if (sendto(sock, ptr, size, 0, (struct sockaddr *)&s, sizeof(struct sockaddr_in)) < 0)
-        fprintf(stderr, "Error sending data to socket");
+            dataSize = 0;
+        }
+
+        if (dataSize == 0)
+        {
+            age = Time::now();
+        }
+
+        memcpy(&sendBuff[dataSize], ptr, size);
+        dataSize += size;
+    }
+
+    if (dataSize > 0 && (flush || age.elapsedMiliseconds() > 100))
+    {
+        if (sendto(sock, sendBuff, dataSize, 0, (struct sockaddr *)&s, sizeof(struct sockaddr_in)) < 0)
+            fprintf(stderr, "Error sending data to socket");
+
+        dataSize = 0;
+    }
 }
 
 // Reports values through UDP Broadcast on port 9999
@@ -50,11 +80,20 @@ void queueMessge(const void *ptr, int size)
 //    byte valueIndex (1B)
 //    byte idLength (1B)
 //    char[] id (1B * idLength), UTF8, not terminated
-void reportData(const char *id, float value)
+void reportData(const char *id, float value, bool flush = false)
 {
+    if (id == nullptr)
+    {
+        queueMessage(nullptr, 0, flush);
+        return;
+    }
+
     static map<string, int> idLookup;
 
     string idStr(id);
+    int idLen = idStr.size();
+    if (idLen > 64)
+        idLen = 64;
 
     // TODO: Resend all ids once every few seconds
 
@@ -72,16 +111,16 @@ void reportData(const char *id, float value)
         valueIndex = idLookup.size();
         idLookup[idStr] = valueIndex;
 
-        int buffSize = 8 + idStr.size();
+        int buffSize = 7 + idLen;
 
         char buff[buffSize];
         *(float *)buff = value;
         buff[4] = 255;
         buff[5] = (char)valueIndex;
-        buff[6] = idStr.size();
-        strcpy(&buff[7], idStr.c_str());
+        buff[6] = idLen;
+        memcpy(&buff[7], idStr.c_str(), idLen);
 
-        queueMessge(buff, buffSize);
+        queueMessage(buff, buffSize, flush);
     }
     else
     {
@@ -91,6 +130,6 @@ void reportData(const char *id, float value)
         *(float *)buff = value;
         buff[4] = (char)valueIndex;
 
-        queueMessge(buff, 5);
+        queueMessage(buff, 5, flush);
     }
 }
